@@ -52,7 +52,7 @@ class AddDataSet(object):
 #   MODEL
 # ==========
 lr = 0.001
-training_iters = 1000000
+training_iters = 500000
 batch_size = 128
 
 n_inputs = 10   #data input (img shape: 10*8)
@@ -63,9 +63,9 @@ n_classes = 10      #classes (0-9 digits)
 trainset = AddDataSet(n_samples=100000)
 #testset = AddDataSet(n_samples=500)
 
-x = tf.placeholder(tf.float32, [None, n_steps, n_inputs])
+x = tf.placeholder(tf.float32, [None, n_steps, n_inputs], name='x_input')
 y = tf.placeholder(tf.float32, [None, 4, n_classes])
-y_label = tf.placeholder(tf.int64, [None, 4])
+y_label = tf.placeholder(tf.int64, [None, 4], name='labels')
 
 weights = {
     # (10, 128)
@@ -105,13 +105,17 @@ def RNN(X, weights, biases):
     return results
 
 pred = RNN(x, weights, biases)
-cost = tf.reduce_mean(tf.contrib.seq2seq.sequence_loss(logits=pred,targets=y_label,weights=W))
+with tf.name_scope('seq_loss'):
+    cost = tf.reduce_mean(tf.contrib.seq2seq.sequence_loss(logits=pred,targets=y_label,weights=W))
+    tf.summary.scalar('loss', cost)
 train_op = tf.train.AdamOptimizer(lr).minimize(cost)
 
 correct_pred = tf.equal(tf.argmax(pred,2), y_label)
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 with tf.Session() as sess:
+    merged = tf.summary.merge_all()
+    writer = tf.summary.FileWriter("logs/", sess.graph)
     init = tf.global_variables_initializer()
     sess.run(init)
     step = 0
@@ -125,16 +129,19 @@ with tf.Session() as sess:
         if step % 200 == 0:
             acc = sess.run(accuracy, feed_dict={
                 x:batch_x,
-                y:batch_y,
+      #          y:batch_y,
                 y_label:batch_y_label
             })
             # Calculate batch loss
             loss = sess.run(cost, feed_dict={
                 x: batch_x,
-                y: batch_y,
+      #          y: batch_y,
                 y_label:batch_y_label
             })
             print("Iter " + str(step * batch_size) + ", Minibatch Loss= " + \
                   "{:.6f}".format(loss) + ", Training Accuracy= " + \
                   "{:.5f}".format(acc))
+            result = sess.run(merged,
+                              feed_dict={x: batch_x, y_label: batch_y_label})
+            writer.add_summary(result, step*batch_size)
         step += 1
