@@ -1,23 +1,46 @@
 import gensim
-import numpy as np
-def extract():
-	count=0
-	sentence=[]
-	with open('output_dataset.txt') as f:
-		for i in f: 
-			count+=1
-			line = i.split('|')
-			list = line[0].split(' ')
-			sentence.append(list)
-			if count == 100:
-				print list
-		
-	model = gensim.models.Word2Vec(sentence, min_count=1)			
-	model.save("output")
-	new_model = gensim.models.Word2Vec.load('output')
+import string
 
-	a = new_model['feel']
-	print a
+model = gensim.models.KeyedVectors.load_word2vec_format('/Users/ivanfzh/Downloads/glove.6B/glove.6B.50d.txt', binary=False)
+a = model['feel']
 
-if __name__ == '__main__':
-	extract()
+fp = open('output_dataset.txt','r')
+fo = open('output_50d.txt', 'w')
+count = 0
+for l in fp.readlines():
+    line = l.strip('\n').split('|')
+    word_list = line[0].split(' ')
+    s = ''
+    judge = True
+    for item in word_list:
+        item = string.lower(item)
+        try:
+            '''
+            li = item.split('-')
+            for i in range(len(li)):
+                word = li[i]
+                if string.count(word,'\*') == 0:
+                    if string.find(word,'\/') == -1:
+                        s.append(model[word].tolist())
+                    else:
+                        index = string.find(word,'\/')
+                        s.append(model[word[0:index]].tolist())
+                        s.append(model[word[index+1]].tolist())
+                        s.append(model[word[index+2:]].tolist())
+                        '''
+            '''li = item.split('-')
+            for i in range(len(li)):
+                word = li[i]
+                s += str(model[word].tolist()) + ' '
+                '''
+            s += str(model[item].tolist())
+        except:
+            judge = False
+         #   print item
+    if judge == True:
+        s = str(line[0]) + '|' + str(line[1]) + '\n'
+        fo.write(s)
+        count += 1
+
+print count
+print a
